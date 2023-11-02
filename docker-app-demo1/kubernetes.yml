@@ -120,8 +120,6 @@ items:
             valueFrom:
               fieldRef:
                 fieldPath: metadata.namespace
-          - name: greeting.message
-            value: "JKube, Hello to -"
           - name: HOSTNAME
             valueFrom:
               fieldRef:
@@ -171,14 +169,8 @@ items:
       group: com.scsb.example
     name: docker-app-demo1
   spec:
-    rules:
-    - host: docker-app-demo1.api.sandbox-m3.1530.p1.openshiftapps.com
-      http:
-        paths:
-        - backend:
-            service:
-              name: docker-app-demo1
-              port:
-                number: 8080
-          path: /
-          pathType: ImplementationSpecific
+    defaultBackend:
+      service:
+        name: docker-app-demo1
+        port:
+          number: 8080
