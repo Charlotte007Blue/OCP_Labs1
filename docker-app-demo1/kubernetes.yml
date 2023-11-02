@@ -1,0 +1,184 @@
+---
+apiVersion: v1
+kind: List
+items:
+- apiVersion: v1
+  kind: ServiceAccount
+  metadata:
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: sa-docker-app-demo1
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      jkube.eclipse.org/scm-url: https://github.com/spring-projects/spring-boot/docker-app-demo1
+      prometheus.io/scrape: "true"
+      prometheus.io/path: /metrics
+      prometheus.io/port: "9779"
+      jkube.eclipse.org/scm-tag: HEAD
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: docker-app-demo1
+  spec:
+    ports:
+    - name: http
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+    selector:
+      app: docker-app-demo1
+      provider: jkube
+      group: com.scsb.example
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: Role
+  metadata:
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: role-docker-app-demo1-view
+  rules:
+  - apiGroups:
+    - ""
+    resources:
+    - pods
+    - configmaps
+    - services
+    verbs:
+    - get
+    - watch
+    - list
+- apiVersion: rbac.authorization.k8s.io/v1
+  kind: RoleBinding
+  metadata:
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: rb-docker-app-demo1
+  roleRef:
+    kind: Role
+    apiGroup: rbac.authorization.k8s.io
+    name: role-docker-app-demo1-view
+  subjects:
+  - kind: ServiceAccount
+    name: sa-docker-app-demo1
+- apiVersion: v1
+  kind: ConfigMap
+  metadata:
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: docker-app-demo1-cm
+  data:
+    greeting.message: "K8s, hello world to - "
+- apiVersion: apps/v1
+  kind: Deployment
+  metadata:
+    annotations:
+      jkube.eclipse.org/scm-url: https://github.com/spring-projects/spring-boot/docker-app-demo1
+      jkube.eclipse.org/scm-tag: HEAD
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: docker-app-demo1
+  spec:
+    replicas: 1
+    revisionHistoryLimit: 2
+    selector:
+      matchLabels:
+        app: docker-app-demo1
+        provider: jkube
+        group: com.scsb.example
+    template:
+      metadata:
+        annotations:
+          jkube.eclipse.org/scm-url: https://github.com/spring-projects/spring-boot/docker-app-demo1
+          jkube.eclipse.org/scm-tag: HEAD
+        labels:
+          app: docker-app-demo1
+          provider: jkube
+          version: 1.0.4
+          group: com.scsb.example
+      spec:
+        containers:
+        - env:
+          - name: KUBERNETES_NAMESPACE
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.namespace
+          - name: greeting.message
+            value: "JKube, Hello to -"
+          - name: HOSTNAME
+            valueFrom:
+              fieldRef:
+                fieldPath: metadata.name
+          image: docker.io/charlottescsb/jkub-docker-app-demo1:1.0.4
+          imagePullPolicy: Always
+          livenessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 180
+            successThreshold: 1
+          name: spring-boot
+          ports:
+          - containerPort: 8080
+            name: http
+            protocol: TCP
+          - containerPort: 9779
+            name: prometheus
+            protocol: TCP
+          - containerPort: 8778
+            name: jolokia
+            protocol: TCP
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /actuator/health
+              port: 8080
+              scheme: HTTP
+            initialDelaySeconds: 10
+            successThreshold: 1
+          securityContext:
+            privileged: false
+        serviceAccount: sa-docker-app-demo1
+- apiVersion: networking.k8s.io/v1
+  kind: Ingress
+  metadata:
+    annotations:
+      jkube.eclipse.org/scm-url: https://github.com/spring-projects/spring-boot/docker-app-demo1
+      jkube.eclipse.org/scm-tag: HEAD
+    labels:
+      app: docker-app-demo1
+      provider: jkube
+      version: 1.0.4
+      group: com.scsb.example
+    name: docker-app-demo1
+  spec:
+    rules:
+    - host: docker-app-demo1.api.sandbox-m3.1530.p1.openshiftapps.com
+      http:
+        paths:
+        - backend:
+            service:
+              name: docker-app-demo1
+              port:
+                number: 8080
+          path: /
+          pathType: ImplementationSpecific
